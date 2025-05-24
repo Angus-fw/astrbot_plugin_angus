@@ -161,7 +161,6 @@
 - 支持自定义关键词回复，@机器人并发送关键词即可自动回复。
 - 支持管理员添加、删除关键词回复。
 - 支持查看所有关键词回复。
-- 数据持久化存储于 `data/keyword_reply/keyword_reply_config.json`。
 
 | 功能 | 命令 |
 |---|---|
@@ -175,19 +174,24 @@
 
 ## ⚙️ 配置说明
 
+### 配置与数据文件一览
+
+| 功能模块           | 文件路径                                                         | 说明                                   |
+|--------------------|------------------------------------------------------------------|----------------------------------------|
+| 提醒和任务数据     | data/reminders/reminder_data.json                                 | 所有提醒和任务的持久化数据             |
+| 会话隔离配置       | data/config/ai_reminder_config.json                               | 是否启用会话隔离的配置                 |
+| 节假日数据缓存     | data/holiday_data/holiday_cache.json                              | 节假日API缓存                          |
+| 主动对话白名单     | active_conversation.json                                          | 主动对话目标用户ID列表，命令动态管理   |
+| 关键词自定义回复   | data/keyword_reply/keyword_reply_config.json                      | 关键词自动回复的自定义内容             |
+| 配置结构说明       | _conf_schema.json                                                 | 插件所有配置项的结构和默认值说明       |
+
+> 💡 所有数据/配置文件的根目录均通过 StarTools.get_data_dir("astrbot_plugin_angus") 自动统一管理，便于迁移和维护。
+
 ### 会话隔离功能
 会话隔离功能使群聊中的每个成员都能拥有自己独立的提醒和任务列表，其他成员无法看到或操作。
 
 - **关闭状态**：群聊中所有成员共享同一组提醒和任务列表
 - **开启状态**：群聊中每个成员都有自己独立的提醒和任务列表
-
-### 配置文件
-| 功能 | 路径 |
-|---|---|
-| 提醒和任务数据 | `data/reminders/reminder_data.json` |
-| 会话隔离配置 | `data/config/ai_reminder_config.json` |
-| 节假日数据缓存 | `data/holiday_data/holiday_cache.json` |
-| 主动对话白名单 | `active_conversation.json`（命令动态管理，自动同步 _conf_schema.json） |
 
 ---
 
