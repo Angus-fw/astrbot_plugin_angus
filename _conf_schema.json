@@ -2,7 +2,7 @@
     "enable_active_conversation": {
         "description": "启用主动对话（主动回复）功能",
         "type": "bool",
-        "hint": "启用后，插件会定时主动向指定用户发起对话。关闭则不主动发起对话。",
+        "hint": "启用后，插件会定时主动向指定用户发起对话。关闭则不主动发起对话。使用命令管理白名单用户。",
         "obvious_hint": true,
         "default": false
     },

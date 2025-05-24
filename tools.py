@@ -25,11 +25,16 @@ class ReminderTools:
             time_str = dt.strftime("%H:%M")
             
             # 调用ReminderSystem的add_reminder方法
+            raw_msg_origin = event.unified_msg_origin
+            creator_id = event.get_sender_id()
+            msg_origin = self.scheduler_manager.get_original_session_id(
+                self.get_session_id(raw_msg_origin, creator_id)
+            )
             result = await self.star_instance.reminder_system.add_reminder(
                 event=event,
                 text=text,
                 time_str=time_str,
-                week=None,
+                week=msg_origin,
                 repeat=repeat,
                 holiday_type=holiday_type,
                 is_task=False
@@ -47,11 +52,16 @@ class ReminderTools:
             time_str = dt.strftime("%H:%M")
             
             # 调用ReminderSystem的add_reminder方法
+            raw_msg_origin = event.unified_msg_origin
+            creator_id = event.get_sender_id()
+            msg_origin = self.scheduler_manager.get_original_session_id(
+                self.get_session_id(raw_msg_origin, creator_id)
+            )
             result = await self.star_instance.reminder_system.add_reminder(
                 event=event,
                 text=text,
                 time_str=time_str,
-                week=None,
+                week=msg_origin,
                 repeat=repeat,
                 holiday_type=holiday_type,
                 is_task=True
@@ -76,7 +86,9 @@ class ReminderTools:
             # 获取会话ID
             creator_id = event.get_sender_id()
             raw_msg_origin = event.unified_msg_origin
-            msg_origin = self.get_session_id(raw_msg_origin, creator_id) if self.unique_session else raw_msg_origin
+            msg_origin = self.scheduler_manager.get_original_session_id(
+                self.get_session_id(raw_msg_origin, creator_id)
+            )
             
             # 获取所有提醒和任务
             reminders = self.star_instance.reminder_system.reminder_data.get(msg_origin, [])

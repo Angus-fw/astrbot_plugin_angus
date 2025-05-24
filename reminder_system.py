@@ -26,12 +26,10 @@ class ReminderSystem:
         # 初始化数据存储
         self.reminder_data = load_reminder_data(self.data_file)
 
-    async def list_reminders(self, event: AstrMessageEvent):
+    async def list_reminders(self, event: AstrMessageEvent, week: str = None):
         '''列出所有提醒和任务'''
         creator_id = event.get_sender_id()
-        raw_msg_origin = event.unified_msg_origin
-        msg_origin = self.tools.get_session_id(raw_msg_origin, creator_id) if self.unique_session else raw_msg_origin
-            
+        msg_origin = week if week else event.unified_msg_origin
         reminders = self.reminder_data.get(msg_origin, [])
         if not reminders:
             return "当前没有设置任何提醒或任务。"
@@ -89,12 +87,10 @@ class ReminderSystem:
         reminder_str += "\n使用 /si rm <序号> 删除提醒或任务"
         return reminder_str
 
-    async def remove_reminder(self, event: AstrMessageEvent, index: int):
+    async def remove_reminder(self, event: AstrMessageEvent, index: int, week: str = None):
         '''删除提醒或任务'''
         creator_id = event.get_sender_id()
-        raw_msg_origin = event.unified_msg_origin
-        msg_origin = self.tools.get_session_id(raw_msg_origin, creator_id) if self.unique_session else raw_msg_origin
-            
+        msg_origin = week if week else event.unified_msg_origin
         reminders = self.reminder_data.get(msg_origin, [])
         if not reminders:
             return "没有设置任何提醒或任务。"
@@ -131,6 +127,7 @@ class ReminderSystem:
     async def add_reminder(self, event: AstrMessageEvent, text: str, time_str: str, week: str = None, repeat: str = None, holiday_type: str = None, is_task: bool = False):
         '''添加提醒或任务'''
         try:
+            msg_origin = week if week else event.unified_msg_origin
             item_type = "任务" if is_task else "提醒"
             
             # 获取用户ID和昵称的安全方法
@@ -160,10 +157,6 @@ class ReminderSystem:
                     creator_name = sender.get("nickname", creator_name)
                 elif hasattr(sender, 'nickname'):
                     creator_name = sender.nickname or creator_name
-            
-            # 获取会话ID
-            raw_msg_origin = event.unified_msg_origin
-            msg_origin = self.tools.get_session_id(raw_msg_origin, creator_id) if self.unique_session else raw_msg_origin
             
             # 初始化该消息来源的提醒列表（如果不存在）
             if msg_origin not in self.reminder_data:
@@ -234,7 +227,7 @@ class ReminderSystem:
             
             repeat_str = self._get_repeat_str(repeat, holiday_type)
             
-            return f"已设置{item_type}:\n内容: {text}\n时间: {dt.strftime('%Y-%m-%d %H:%M')}\n{start_str}{repeat_str}\n\n使用 //列表全部 查看所有提醒和任务"
+            return f"已设置{item_type}:\n内容: {text}\n时间: {dt.strftime('%Y-%m-%d %H:%M')}\n{start_str}{repeat_str}\n\n使用 /列表全部 查看所有提醒和任务"
             
         except Exception as e:
             return f"设置{item_type}时出错：{str(e)}"

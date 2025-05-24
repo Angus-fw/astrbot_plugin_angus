@@ -56,7 +56,7 @@ class KeywordReplyManager:
             
         parts = args.split(":", 1)
         if len(parts) != 2:
-            return "❌ 格式错误，正确格式：/添加自定义回复 关键字|回复内容", "", ""
+            return "❌ 格式错误，正确格式：/添加自定义回复 关键字:回复内容", "", ""
             
         keyword = parts[0].strip()
         reply = parts[1]
@@ -129,7 +129,17 @@ class KeywordReplyManager:
         Returns:
             str: 对应的回复，如果没有匹配则返回None
         """
-        if not self.enable:
+        if not self.enable or not msg:
             return None
             
-        return self.keyword_map.get(msg.strip().lower()) 
+        # 去除前后空格并转小写
+        msg = msg.strip().lower()
+        if not msg:
+            return None
+            
+        # 精确匹配
+        if msg in self.keyword_map:
+            logger.info(f"关键词回复命中：{msg} -> {self.keyword_map[msg]}")
+            return self.keyword_map[msg]
+            
+        return None 

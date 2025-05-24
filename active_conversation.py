@@ -270,25 +270,12 @@ class ActiveConversation:
         msg += "2. aiocqhttp - QQ机器人"
         return msg
 
-    def _update_schema_default(self):
-        schema_path = os.path.join(os.path.dirname(__file__), "_conf_schema.json")
-        try:
-            with open(schema_path, "r", encoding="utf-8") as f:
-                schema = json.load(f)
-            if "target_ids" in schema:
-                schema["target_ids"]["default"] = self.target_ids
-                with open(schema_path, "w", encoding="utf-8") as f:
-                    json.dump(schema, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            logger.error(f"更新_conf_schema.json失败: {e}")
-
     async def add_target(self, target_id: str) -> str:
         """添加目标用户ID"""
         if target_id in self.target_ids:
             return f"目标用户ID已存在: {target_id}"
         self.target_ids.append(target_id)
         self._save_targets()
-        self._update_schema_default()
         await self.restart_timer()
         return f"已添加目标用户ID: {target_id}"
 
@@ -298,7 +285,6 @@ class ActiveConversation:
             return f"目标用户ID不存在: {target_id}"
         self.target_ids.remove(target_id)
         self._save_targets()
-        self._update_schema_default()
         await self.restart_timer()
         return f"已删除目标用户ID: {target_id}"
 
