@@ -906,8 +906,26 @@ class ReminderScheduler:
     
     def add_job(self, msg_origin, reminder, dt):
         '''添加定时任务'''
+        # 确保 msg_origin 存在于 reminder_data 中
+        if msg_origin not in self.reminder_data:
+            self.reminder_data[msg_origin] = []
+            
         # 生成唯一的任务ID
-        job_id = f"reminder_{msg_origin}_{len(self.reminder_data[msg_origin])-1}"
+        current_index = len(self.reminder_data[msg_origin])
+        job_id = f"reminder_{msg_origin}_{current_index}"
+        
+        # 确保job_id不重复
+        base_job_id = job_id
+        counter = 1
+        while True:
+            try:
+                # 检查是否存在同名job
+                if not self.scheduler.get_job(job_id):
+                    break
+                job_id = f"{base_job_id}_{counter}"
+                counter += 1
+            except:
+                break
         
         # 根据重复类型设置不同的触发器
         if reminder.get("repeat") == "daily":

@@ -148,31 +148,13 @@ class Main(Star):
         result = self.active_conversation.set_probability(prob)
         yield event.plain_result(result)
 
-    @command("设置对话平台")
-    async def set_platform_command(self, event: AstrMessageEvent, platform: str):
-        """设置使用的平台"""
-        if not self.active_conversation:
-            yield event.plain_result("主动对话功能未启用")
-            return
-        result = self.active_conversation.set_platform(platform)
-        yield event.plain_result(result)
-
-    @command("列出平台")
-    async def list_platform_command(self, event: AstrMessageEvent):
-        """列出当前平台设置"""
-        if not self.active_conversation:
-            yield event.plain_result("主动对话功能未启用")
-            return
-        result = self.active_conversation.get_platform_info()
-        yield event.plain_result(result)
-
     @command("添加白名单")
     async def add_target_command(self, event: AstrMessageEvent, target_id: str):
         """添加目标用户ID"""
         if not self.active_conversation:
             yield event.plain_result("主动对话功能未启用")
             return
-        result = self.active_conversation.add_target(target_id)
+        result = await self.active_conversation.add_target(target_id)
         yield event.plain_result(result)
 
     @command("删除白名单")
@@ -181,7 +163,7 @@ class Main(Star):
         if not self.active_conversation:
             yield event.plain_result("主动对话功能未启用")
             return
-        result = self.active_conversation.delete_target(target_id)
+        result = await self.active_conversation.delete_target(target_id)
         yield event.plain_result(result)
 
     @command("列出白名单")

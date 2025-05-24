@@ -8,6 +8,9 @@ from astrbot.core.platform.platform_metadata import PlatformMetadata
 from astrbot.api.event import AstrMessageEvent
 from astrbot.core.message.components import Plain
 from astrbot.core.message.message_event_result import MessageChain
+import os
+import json
+from astrbot.core.star.star_handler import star_handlers_registry, EventType
 
 DEFAULT_TRIGGERS = [
     "你现在感觉有点无聊，想跟朋友打个招呼吧？那就去和你的朋友问声好吧！",
@@ -35,17 +38,38 @@ class ActiveConversationConfig:
         self.target_ids = config.get("target_ids", [""])
 
 class ActiveConversation:
+    CONFIG_PATH = os.path.join(os.path.dirname(__file__), "active_conversation.json")
+
+    def _save_targets(self):
+        try:
+            with open(self.CONFIG_PATH, "w", encoding="utf-8") as f:
+                json.dump({"target_ids": self.target_ids}, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"保存目标用户ID失败: {e}")
+
+    def _load_targets(self):
+        try:
+            with open(self.CONFIG_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data.get("target_ids", [])
+        except Exception:
+            return []
+
     def __init__(self, context):
         self.context = context
         self.prob = 0.1  # 主动对话概率1%
         self.triggers = DEFAULT_TRIGGERS.copy()
-        # 从配置中读取target_ids，如果未配置则使用默认值
-        config = ActiveConversationConfig(self.context._config)
-        self.target_ids = config.target_ids
-        self.platform = "wechatpadpro"  # 设置默认平台为 wechatpadpro
+        self.target_ids = self._load_targets()  # 从文件加载
         self.timer_task = None
         self.last_trigger_time = None  # 记录上次触发时间
         asyncio.create_task(self.initialize())
+
+    def _detect_platform(self, target_id: str) -> str:
+        # 简单规则：如果是QQ号全数字，返回aiocqhttp，否则默认wechatpadpro
+        if target_id.isdigit():
+            return "aiocqhttp"
+        # 你可以根据实际ID特征扩展更多平台判断
+        return "wechatpadpro"
 
     async def initialize(self):
         if not self.target_ids or all(not tid for tid in self.target_ids):
@@ -89,7 +113,8 @@ class ActiveConversation:
 
         for target_id in self.target_ids:
             safe_target_id = target_id.replace(':', '_')
-            unified_msg = f"{self.platform}:FriendMessage:{safe_target_id}"
+            platform = self._detect_platform(target_id)
+            unified_msg = f"{platform}:FriendMessage:{safe_target_id}"
             try:
                 # 获取或创建会话
                 curr_cid = await self.context.conversation_manager.get_curr_conversation_id(unified_msg)
@@ -102,22 +127,24 @@ class ActiveConversation:
                 if conversation and conversation.history:
                     recent_context = _json.loads(conversation.history)[-5:]  # 取最近5条
 
-                # 尝试用LLM生成个性化触发语句
+                # 优先用个性化触发语句，否则用默认
                 personalized_trigger = None
                 if recent_context:
                     # 构造prompt
                     prompt = (
-                        "请根据以下用户历史对话，生成一句适合开启新话题的问候或聊天语句，要求自然、贴近用户兴趣：\n"
+                        f"请根据以下用户（ID: {target_id}）的历史对话，生成一句适合开启新话题的问候或聊天语句，要求自然、贴近用户兴趣：\n"
                         + "\n".join([f"{item['role']}: {item['content']}" for item in recent_context])
                     )
-                    try:
-                        llm_resp = await provider.text_chat(prompt=prompt, session_id=curr_cid)
-                        if llm_resp.completion_text:
-                            personalized_trigger = llm_resp.completion_text.strip()
-                    except Exception as e:
-                        logger.warning(f"生成个性化触发语句失败: {e}")
+                else:
+                    # 没有历史对话时，依然为每个用户构造带ID的个性化prompt
+                    prompt = f"请为用户（ID: {target_id}）生成一句自然、友好、个性化的问候语，避免和其他用户完全一样。可以结合ID特征、随机元素或幽默风格。"
+                try:
+                    llm_resp = await provider.text_chat(prompt=prompt, session_id=curr_cid)
+                    if llm_resp.completion_text:
+                        personalized_trigger = llm_resp.completion_text.strip()
+                except Exception as e:
+                    logger.warning(f"生成个性化触发语句失败: {e}")
 
-                # 优先用个性化触发语句，否则用默认
                 trigger = personalized_trigger or random.choice(self.triggers)
 
                 mock_message = AstrBotMessage()
@@ -131,8 +158,8 @@ class ActiveConversation:
                     message_str=trigger,
                     message_obj=mock_message,
                     platform_meta=PlatformMetadata(
-                        name=self.platform,
-                        description=f"模拟的{self.platform}平台"
+                        name=platform,
+                        description=f"模拟的{platform}平台"
                     ),
                     session_id=unified_msg
                 )
@@ -168,7 +195,7 @@ class ActiveConversation:
                 )
                 mock_event.set_extra("provider_request", llm_req)
                 response = await provider.text_chat(**llm_req.__dict__)
-                handlers = self.context.star_handlers_registry.get_handlers_by_event_type(self.context.EventType.OnLLMResponseEvent)
+                handlers = star_handlers_registry.get_handlers_by_event_type(EventType.OnLLMResponseEvent)
                 for handler in handlers:
                     try:
                         await handler.handler(mock_event, response)
@@ -236,33 +263,45 @@ class ActiveConversation:
         return msg
 
     def set_platform(self, platform: str) -> str:
-        """设置使用的平台"""
-        supported_platforms = ["wechatpadpro", "aiocqhttp"]
-        if platform not in supported_platforms:
-            return f"不支持的平台类型。支持的平台: {', '.join(supported_platforms)}"
-        self.platform = platform
-        return f"已设置平台为: {platform}"
+        return "平台已自动识别，无需手动设置。"
 
     def get_platform_info(self) -> str:
-        """获取当前平台设置信息"""
-        msg = f"当前平台设置为: {self.platform}\n"
+        msg = "平台已自动识别，无需手动设置。\n"
         msg += "支持的平台类型：\n"
         msg += "1. wechatpadpro - 微信平板专业版\n"
         msg += "2. aiocqhttp - QQ机器人"
         return msg
 
-    def add_target(self, target_id: str) -> str:
+    def _update_schema_default(self):
+        schema_path = os.path.join(os.path.dirname(__file__), "_conf_schema.json")
+        try:
+            with open(schema_path, "r", encoding="utf-8") as f:
+                schema = json.load(f)
+            if "target_ids" in schema:
+                schema["target_ids"]["default"] = self.target_ids
+                with open(schema_path, "w", encoding="utf-8") as f:
+                    json.dump(schema, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"更新_conf_schema.json失败: {e}")
+
+    async def add_target(self, target_id: str) -> str:
         """添加目标用户ID"""
         if target_id in self.target_ids:
             return f"目标用户ID已存在: {target_id}"
         self.target_ids.append(target_id)
+        self._save_targets()
+        self._update_schema_default()
+        await self.restart_timer()
         return f"已添加目标用户ID: {target_id}"
 
-    def delete_target(self, target_id: str) -> str:
+    async def delete_target(self, target_id: str) -> str:
         """删除目标用户ID"""
         if target_id not in self.target_ids:
             return f"目标用户ID不存在: {target_id}"
         self.target_ids.remove(target_id)
+        self._save_targets()
+        self._update_schema_default()
+        await self.restart_timer()
         return f"已删除目标用户ID: {target_id}"
 
     def list_targets(self) -> str:
@@ -270,4 +309,29 @@ class ActiveConversation:
         msg = "当前目标用户ID列表：\n"
         for i, tid in enumerate(self.target_ids):
             msg += f"{i+1}. {tid}\n"
+        return msg
+
+    async def restart_timer(self):
+        await self.shutdown()
+        await self.initialize()
+
+    def add_trigger(self, trigger: str) -> str:
+        """添加触发语句"""
+        self.triggers.append(trigger)
+        return f"已添加触发语句: {trigger}"
+
+    def delete_trigger(self, index: int) -> str:
+        """删除触发语句"""
+        if index < 1 or index > len(self.triggers):
+            return "无效的触发语句索引"
+        deleted = self.triggers.pop(index-1)
+        return f"已删除触发语句: {deleted}"
+
+    def list_triggers(self) -> str:
+        """列出所有触发语句"""
+        if not self.triggers:
+            return "当前没有触发语句"
+        msg = "当前的触发语句:\n"
+        for i, trigger in enumerate(self.triggers):
+            msg += f"{i+1}. {trigger}\n"
         return msg 

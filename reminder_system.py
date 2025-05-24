@@ -54,7 +54,7 @@ class ReminderSystem:
                 if task_items:
                     prompt += f"\n\n任务列表：\n" + "\n".join(task_items)
                 
-                prompt += "\n\n同时告诉用户可以使用/si rm <序号>删除提醒或任务，或者直接命令你来删除。直接发出对话内容，就是你说的话，不要有其他的背景描述。"
+                prompt += "\n\n同时告诉用户可以使用/删除全部 <序号>删除提醒或任务，或者直接命令你来删除。直接发出对话内容，就是你说的话，不要有其他的背景描述。"
                 
                 response = await provider.text_chat(
                     prompt=prompt,
@@ -129,10 +129,48 @@ class ReminderSystem:
     async def add_reminder(self, event: AstrMessageEvent, text: str, time_str: str, week: str = None, repeat: str = None, holiday_type: str = None, is_task: bool = False):
         '''添加提醒或任务'''
         try:
+            item_type = "任务" if is_task else "提醒"
+            
+            # 获取用户ID和昵称的安全方法
+            creator_id = None
+            creator_name = "用户"
+            
+            # 尝试多种方式获取用户ID
+            if hasattr(event, 'get_user_id'):
+                creator_id = event.get_user_id()
+            elif hasattr(event, 'get_sender_id'):
+                creator_id = event.get_sender_id()
+            elif hasattr(event, 'sender') and hasattr(event.sender, 'user_id'):
+                creator_id = event.sender.user_id
+            elif hasattr(event.message_obj, 'sender'):
+                creator_id = getattr(event.message_obj.sender, 'user_id', None)
+            
+            # 尝试多种方式获取用户昵称
+            if hasattr(event, 'get_sender'):
+                sender = event.get_sender()
+                if isinstance(sender, dict):
+                    creator_name = sender.get("nickname", creator_name)
+                elif hasattr(sender, 'nickname'):
+                    creator_name = sender.nickname or creator_name
+            elif hasattr(event.message_obj, 'sender'):
+                sender = event.message_obj.sender
+                if isinstance(sender, dict):
+                    creator_name = sender.get("nickname", creator_name)
+                elif hasattr(sender, 'nickname'):
+                    creator_name = sender.nickname or creator_name
+            
+            # 获取会话ID
+            raw_msg_origin = event.unified_msg_origin
+            msg_origin = self.tools.get_session_id(raw_msg_origin, creator_id) if self.unique_session else raw_msg_origin
+            
+            # 初始化该消息来源的提醒列表（如果不存在）
+            if msg_origin not in self.reminder_data:
+                self.reminder_data[msg_origin] = []
+            
             datetime_str = parse_datetime(time_str)
             week_map = {
-                'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3, 
-                'fri': 4, 'sat': 5, 'sun': 6
+                '0': 0, '1': 1, '2': 2, '3': 3, 
+                '4': 4, '5': 5, '6': 6
             }
             
             if week and week.lower() not in week_map:
@@ -161,14 +199,6 @@ class ReminderSystem:
             if holiday_type and holiday_type.lower() not in holiday_types:
                 return "节假日类型错误，可选值：workday(仅工作日执行)，holiday(仅法定节假日执行)"
 
-            creator_id = event.get_sender_id()
-            raw_msg_origin = event.unified_msg_origin
-            msg_origin = self.tools.get_session_id(raw_msg_origin, creator_id) if self.unique_session else raw_msg_origin
-            creator_name = event.message_obj.sender.nickname if hasattr(event.message_obj, 'sender') and hasattr(event.message_obj.sender, 'nickname') else None
-            
-            if msg_origin not in self.reminder_data:
-                self.reminder_data[msg_origin] = []
-            
             dt = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M")
             
             if week:
@@ -201,9 +231,8 @@ class ReminderSystem:
             start_str = f"从{week_names[dt.weekday()]}开始，" if week else ""
             
             repeat_str = self._get_repeat_str(repeat, holiday_type)
-            item_type = "任务" if is_task else "提醒"
             
-            return f"已设置{item_type}:\n内容: {text}\n时间: {dt.strftime('%Y-%m-%d %H:%M')}\n{start_str}{repeat_str}\n\n使用 /si ls 查看所有提醒和任务"
+            return f"已设置{item_type}:\n内容: {text}\n时间: {dt.strftime('%Y-%m-%d %H:%M')}\n{start_str}{repeat_str}\n\n使用 //列表全部 查看所有提醒和任务"
             
         except Exception as e:
             return f"设置{item_type}时出错：{str(e)}"
@@ -239,19 +268,19 @@ class ReminderSystem:
 1. 添加提醒：
    提醒 <内容> <时间> [开始星期] [重复类型] [--holiday_type=...]
    例如：
-   -     add 写周报 8:05
-   - 提醒 吃饭 8:05 sun daily (从周日开始每天)
-   - 提醒 开会 8:05 mon weekly (每周一)
-   - 提醒 交房租 8:05 fri monthly (从周五开始每月)
-   - 提醒 上班打卡 8:30 daily workday (每个工作日，法定节假日不触发)
-   - 提醒 休息提醒 9:00 daily holiday (每个法定节假日触发)
+
+   - 添加提醒 吃饭 8:05 0 daily (从周日开始每天)
+   - 添加提醒 开会 8:05 1 weekly (每周一)
+   - 添加提醒 交房租 8:05 fr5i monthly (从周五开始每月)
+   - 添加提醒 上班打卡 8:30 daily workday (每个工作日，法定节假日不触发)
+   - 添加提醒 休息提醒 9:00 daily holiday (每个法定节假日触发)
 
 2. 添加任务：
    任务 <内容> <时间> [开始星期] [重复类型] [--holiday_type=...]
    例如：
-   - 任务 发送天气预报 8:00
-   - 任务 汇总今日新闻 18:00 daily
-   - 任务 推送工作安排 9:00 mon weekly workday (每周一工作日推送)
+   - 添加任务 发送天气预报 8:00
+   - 添加任务 汇总今日新闻 18:00 daily
+   - 添加任务 推送工作安排 9:00 1 0 workday (每周一工作日推送)
 
 3. 查看提醒和任务：
    列出全部 - 列出所有提醒和任务
@@ -260,13 +289,13 @@ class ReminderSystem:
    删除全部 <序号> - 删除指定提醒或任务
 
 5. 星期可选值：
-   - mon: 周一
-   - tue: 周二
-   - wed: 周三
-   - thu: 周四
-   - fri: 周五
-   - sat: 周六
-   - sun: 周日
+   - 1: 周一
+   - 2: 周二
+   - 3: 周三
+   - 4: 周四
+   - 5: 周五
+   - 6: 周六
+   - 0: 周日
 
 6. 重复类型：
    - daily: 每天重复
