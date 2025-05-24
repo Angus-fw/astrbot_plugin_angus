@@ -34,10 +34,6 @@ DEFAULT_TRIGGERS = [
     "你今天看到了一幅美丽的风景，想用文字描述给你朋友听，让他也感受一下，现在找他开启话题吧。"
 ]
 
-class ActiveConversationConfig:
-    def __init__(self, config):
-        self.target_ids = config.get("target_ids", [""])
-
 class ActiveConversation:
     def __init__(self, context, data_dir=None):
         self.context = context
