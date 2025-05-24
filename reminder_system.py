@@ -7,17 +7,19 @@ from astrbot.api import logger
 from astrbot.api.event import MessageChain, AstrMessageEvent
 from astrbot.core.message.message_event_result import MessageChain
 from .utils import load_reminder_data, parse_datetime, save_reminder_data, is_outdated
+from astrbot.api.star import StarTools
 
 class ReminderSystem:
-    def __init__(self, context, config, scheduler_manager, tools):
+    def __init__(self, context, config, scheduler_manager, tools, data_dir=None):
         self.context = context
         self.config = config
         self.scheduler_manager = scheduler_manager
         self.tools = tools
         self.unique_session = config.get("unique_session", False)
         
-        # 使用data目录下的数据文件
-        data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data")
+        # 使用StarTools获取数据目录
+        if data_dir is None:
+            data_dir = StarTools.get_data_dir("astrbot_plugin_angus")
         os.makedirs(os.path.join(data_dir, "reminders"), exist_ok=True)
         self.data_file = os.path.join(data_dir, "reminders", "reminder_data.json")
         

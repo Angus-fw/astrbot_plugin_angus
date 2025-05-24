@@ -1,6 +1,7 @@
 import os
 import json
 from astrbot.api import logger
+from astrbot.api.star import StarTools
 
 class KeywordReplyManager:
     def __init__(self, data_dir=None, config=None):
@@ -10,7 +11,7 @@ class KeywordReplyManager:
         
         # 设置数据目录
         if data_dir is None:
-            data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data")
+            data_dir = StarTools.get_data_dir("astrbot_plugin_angus")
         self.keyword_data_dir = os.path.join(data_dir, "keyword_reply")
         os.makedirs(self.keyword_data_dir, exist_ok=True)
         self.keyword_config_path = os.path.join(self.keyword_data_dir, "keyword_reply_config.json")

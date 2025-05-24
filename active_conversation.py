@@ -11,6 +11,7 @@ from astrbot.core.message.message_event_result import MessageChain
 import os
 import json
 from astrbot.core.star.star_handler import star_handlers_registry, EventType
+from astrbot.api.star import StarTools
 
 DEFAULT_TRIGGERS = [
     "你现在感觉有点无聊，想跟朋友打个招呼吧？那就去和你的朋友问声好吧！",
@@ -38,7 +39,17 @@ class ActiveConversationConfig:
         self.target_ids = config.get("target_ids", [""])
 
 class ActiveConversation:
-    CONFIG_PATH = os.path.join(os.path.dirname(__file__), "active_conversation.json")
+    def __init__(self, context, data_dir=None):
+        self.context = context
+        self.prob = 0.1  # 主动对话概率1%
+        self.triggers = DEFAULT_TRIGGERS.copy()
+        if data_dir is None:
+            data_dir = StarTools.get_data_dir("astrbot_plugin_angus")
+        self.CONFIG_PATH = os.path.join(data_dir, "active_conversation.json")
+        self.target_ids = self._load_targets()  # 从文件加载
+        self.timer_task = None
+        self.last_trigger_time = None  # 记录上次触发时间
+        asyncio.create_task(self.initialize())
 
     def _save_targets(self):
         try:
@@ -54,15 +65,6 @@ class ActiveConversation:
                 return data.get("target_ids", [])
         except Exception:
             return []
-
-    def __init__(self, context):
-        self.context = context
-        self.prob = 0.1  # 主动对话概率1%
-        self.triggers = DEFAULT_TRIGGERS.copy()
-        self.target_ids = self._load_targets()  # 从文件加载
-        self.timer_task = None
-        self.last_trigger_time = None  # 记录上次触发时间
-        asyncio.create_task(self.initialize())
 
     def _detect_platform(self, target_id: str) -> str:
         # 简单规则：如果是QQ号全数字，返回aiocqhttp，否则默认wechatpadpro

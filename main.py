@@ -1,5 +1,5 @@
 from astrbot.api.event import AstrMessageEvent, MessageEventResult
-from astrbot.api.star import Context, Star, register
+from astrbot.api.star import Context, Star, register, StarTools
 from astrbot.api.message_components import *
 from astrbot.api.event.filter import command, command_group, EventMessageType, PermissionType
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -62,25 +62,26 @@ class Main(Star):
         # 记录配置信息
         logger.info(f"智能提醒插件启动成功，会话隔离：{'启用' if self.unique_session else '禁用'}")
 
-        # 在插件初始化时根据配置决定是否启动主动对话功能
-        if self.config.get("enable_active_conversation", False):
-            self.active_conversation = ActiveConversation(context)
-        else:
-            self.active_conversation = None
-
-        self.cd = 10  # 默认冷却时间为 10 秒
-        self.last_usage = {} # 存储每个用户上次使用指令的时间
-        self.semaphore = asyncio.Semaphore(10)  # 限制并发请求数量为 10
-
+        data_dir = StarTools.get_data_dir("astrbot_plugin_angus")
         # 初始化关键词回复管理器
-        self.keyword_manager = KeywordReplyManager(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data"), self.config)
+        self.keyword_manager = KeywordReplyManager(data_dir, self.config)
 
         self.status_tools = ServerStatusTools(enable_server_status=getattr(self, 'enable_server_status', True))
 
         self.setu_tools = SetuTools(enable_setu=self.enable_setu, cd=10)
 
         # 初始化提醒系统
-        self.reminder_system = ReminderSystem(context, self.config, self.scheduler_manager, self.tools)
+        self.reminder_system = ReminderSystem(context, self.config, self.scheduler_manager, self.tools, data_dir)
+
+        # 在插件初始化时根据配置决定是否启动主动对话功能
+        if self.config.get("enable_active_conversation", False):
+            self.active_conversation = ActiveConversation(context, data_dir)
+        else:
+            self.active_conversation = None
+
+        self.cd = 10  # 默认冷却时间为 10 秒
+        self.last_usage = {} # 存储每个用户上次使用指令的时间
+        self.semaphore = asyncio.Semaphore(10)  # 限制并发请求数量为 10
 
     @command("添加自定义回复")
     async def add_reply(self, event: AstrMessageEvent):
