@@ -38,8 +38,13 @@ def parse_datetime(datetime_str: str, week: str = None) -> str:
         # 设置时间
         dt = today.replace(hour=hour, minute=minute, second=0, microsecond=0)
         
+        # 优先处理 "明天" 和 "后天"
+        if week == "明天":
+            dt += datetime.timedelta(days=1)
+        elif week == "后天":
+            dt += datetime.timedelta(days=2)
         # 如果指定了星期几
-        if week:
+        elif week:
             week_map = {
                 '周日': 6, '周一': 0, '周二': 1, '周三': 2, 
                 '周四': 3, '周五': 4, '周六': 5
