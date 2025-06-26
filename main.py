@@ -40,7 +40,7 @@ class Main(Star):
     def info(cls):
         return {
             "name": "astrbot_plugin_angus",
-            "version": "1.1.3",
+            "version": "1.1.4",
             "description": "这是一个为 AstrBot 开发的综合功能插件合集,集成了多个实用功能,包括智能提醒、主动对话、涩图功能和服务器状态监控等",
             "author": "angus"
         }
