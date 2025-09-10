@@ -273,7 +273,7 @@ si 删除回复 你好
 - 🐛 问题反馈：[GitHub Issues](https://github.com/Angus-fw/astrbot_plugin_angus/issues)
 - 💡 功能建议：[Discussions](https://github.com/Angus-fw/astrbot_plugin_angus/discussions)
 
-## 📝 更新日志
+## 更新日志
 
 ### v1.1.5
 - 🛠 修复适配 AstrBot 的若干问题，提升稳定性与兼容性
