@@ -1,0 +1,44 @@
+{
+    "enable_active_conversation": {
+        "description": "启用主动对话（主动回复）功能",
+        "type": "bool",
+        "hint": "启用后，插件会定时主动向指定用户发起对话。关闭则不主动发起对话。使用命令管理白名单用户。",
+        "obvious_hint": true,
+        "default": false
+    },
+    "unique_session": {
+        "description": "启用会话隔离",
+        "type": "bool",
+        "hint": "启用后，在群组或频道中，每个人的提醒和任务都是独立的。不同用户之间无法看到和操作对方的提醒和任务。",
+        "obvious_hint": true,
+        "default": false
+    },
+    "enable_setu": {
+        "description": "启用涩图（setu）功能",
+        "type": "bool",
+        "hint": "启用后，可以通过命令获取涩图。关闭则禁用所有涩图相关命令。",
+        "obvious_hint": true,
+        "default": true
+    },
+    "enable_server_status": {
+        "description": "启用服务器状态功能",
+        "type": "bool",
+        "hint": "启用后，可以通过命令获取服务器状态。关闭则禁用所有服务器状态相关命令。",
+        "obvious_hint": true,
+        "default": true
+    },
+    "enable_keyword_reply": {
+        "description": "启用关键词自定义回复功能",
+        "type": "bool",
+        "hint": "启用后，可以自定义关键词回复。关闭则禁用所有关键词回复相关命令和自动回复。",
+        "obvious_hint": true,
+        "default": true
+    },
+    "enable_music": {
+        "description": "启用音乐搜索与直链功能（/si 音乐）",
+        "type": "bool",
+        "hint": "启用后，可使用 /si 音乐 <歌名> [序号] 搜索酷狗并获取直链。关闭后命令将不可用。",
+        "obvious_hint": true,
+        "default": true
+    }
+} 
