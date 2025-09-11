@@ -272,7 +272,7 @@ si 删除回复 你好
 - 📚 文档：[AstrBot插件开发文档](https://astrbot.soulter.top/center/docs/%E5%BC%80%E5%8F%91/%E6%8F%92%E4%BB%B6%E5%BC%80%E5%8F%91/)
 - 🐛 问题反馈：[GitHub Issues](https://github.com/Angus-fw/astrbot_plugin_angus/issues)
 - 💡 功能建议：[Discussions](https://github.com/Angus-fw/astrbot_plugin_angus/discussions)
-- 💬 QQ群：[插件交流群](http://mqqapi://card/show_pslcard?card_type=group&uin=906637704)
+- 💬 QQ群：[插件交流群:906637704]
 
 ## 更新日志
 
